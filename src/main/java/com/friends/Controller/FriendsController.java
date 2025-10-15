@@ -1,0 +1,80 @@
+package com.friends.Controller;
+
+import com.friends.Entity.CommonResponse;
+import com.friends.Entity.FriendsLstResponse;
+import com.friends.Service.FriendsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+@RequiredArgsConstructor
+@RestController
+@Tag(name = "친구 맺기", description = "에이지알 서비스에 > 친구 맺기 기능 API")
+public class FriendsController {
+
+    private final FriendsService friendsService;
+    private static final String myId = "jyj"; // "나" 고정 ID
+
+
+    /**
+     *  친구 목록 조회
+     * @param maxSize
+     * @return
+     */
+    @GetMapping("/api/friends")
+    @Operation(summary = "친구 목록 조회",
+                description = "나를 기준으로 현재 맺어진 친구 목록을 조회합니다.",
+                responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0001 : 친구 목록 조회 실패")})
+    public CommonResponse<FriendsLstResponse> getFriendsLst(@RequestParam @NotNull @Min(value = 0, message = "페이지는 0 이상이어야 합니다") Integer page,
+                                            @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
+                                            @RequestParam(defaultValue = "approvedAt,desc") String sort) {
+        FriendsLstResponse result = new FriendsLstResponse();
+        result = friendsService.getFriendsLst(myId, page, maxSize, sort);
+
+        return CommonResponse.success(result);
+    }
+
+    /**
+     *   받은 친구 신청 목록 조회
+     * @param page
+     * @return
+     */
+    @GetMapping("/api/friends/requests")
+    public String getReqFriendsLst(@RequestParam("page") String page) {
+        return "friends";
+    }
+
+    /**
+     *   친구 신청
+     * @param page
+     * @return
+     */
+    @PostMapping("/api/friends/request")
+    public String reqFriends(@RequestParam("page") String page) {
+        return "friends";
+    }
+
+    /**
+     *   친구 수락
+     * @param page
+     * @return
+     */
+    @PostMapping("/api/friends/accept")
+    public String acptFriends(@RequestParam("page") String page) {
+        return "friends";
+    }
+
+    /**
+     *   친구 거절
+     * @param page
+     * @return
+     */
+    @PostMapping("/api/friends/reject")
+    public String rjctFriends(@RequestParam("page") String page) {
+        return "friends";
+    }
+}

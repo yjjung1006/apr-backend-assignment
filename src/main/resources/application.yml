@@ -2,7 +2,7 @@ spring:
   application:
     name: prj-friends
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:tcp://localhost/~/test;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
