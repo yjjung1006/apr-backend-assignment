@@ -1,4 +1,4 @@
-package com.friends.Entity;
+package com.friends.Entity.Response;
 
 import lombok.Getter;
 import lombok.Setter;
