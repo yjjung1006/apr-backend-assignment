@@ -1,6 +1,7 @@
-package com.friends.Entity;
+package com.friends.Entity.Request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.friends.Entity.FriendId;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,7 +12,7 @@ import java.util.Date;
 @Table(name = "FRND_LST_MST")
 @Getter
 @Setter
-public class Friend {
+public class FriendEntity {
     @EmbeddedId
     private FriendId id;
 

@@ -1,6 +1,5 @@
 package com.friends.Entity.Request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,7 +10,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 @Entity
-@Table(name = "RQST_FRND")
+@Table(name = "FRND_REQUEST")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,6 +28,9 @@ public class FriendRequestEntity implements Serializable {
 
     @Column(name = "PROC_YN")
     private String procYn;
+
+    @Column(name = "REJECT_YN")
+    private String rejectYn;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "REQUESTED_AT")

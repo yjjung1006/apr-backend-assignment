@@ -17,7 +17,6 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FriendReq implements Serializable {
-
     @Id
     @Column(name = "REQUEST_ID")
     @JsonProperty("request_id")

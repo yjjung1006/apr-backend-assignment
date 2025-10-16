@@ -1,6 +1,6 @@
 package com.friends.Entity.Response;
 
-import com.friends.Entity.Friend;
+import com.friends.Entity.Request.FriendEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,5 +17,5 @@ import java.util.List;
 public class FriendsLstResponse {
     private Integer totalPages;
     private Integer totalCount;
-    private List<Friend> items;
+    private List<FriendEntity> items;
 }

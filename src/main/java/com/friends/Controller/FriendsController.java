@@ -7,6 +7,7 @@ import com.friends.Service.FriendsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -31,13 +32,14 @@ public class FriendsController {
     @Operation(summary = "친구 목록 조회",
                 description = "나를 기준으로 현재 맺어진 친구 목록을 조회합니다.",
                 responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0001 : 친구 목록 조회 실패")})
-    public CommonResponse<FriendsLstResponse> getFriendsLst(@RequestParam @NotNull @Min(value = 0, message = "페이지는 0 이상이어야 합니다") Integer page,
+    public CommonResponse<FriendsLstResponse> getFriendsLst(@RequestHeader("X-user-Id") String requestUserId,
+                                            @RequestParam @NotNull @Min(value = 0, message = "페이지는 0 이상이어야 합니다") Integer page,
                                             @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
                                             @RequestParam(defaultValue = "approvedAt,desc") @Pattern(
                                                     regexp = "^approvedAt,(asc|desc)$",
                                                     message = "sort 값은 approvedAt,asc 또는 approvedAt,desc 여야 합니다.") String sort) {
         FriendsLstResponse result = new FriendsLstResponse();
-        result = friendsService.getFriendsLst(page, maxSize, sort);
+        result = friendsService.getFriendsLst(requestUserId, page, maxSize, sort);
 
         return CommonResponse.success(result);
     }
@@ -53,36 +55,52 @@ public class FriendsController {
     @Operation(summary = "받은 친구 신청 목록 조회",
             description = "나를 기준으로 받은 친구 신청 목록을 조회합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0002 : 받은 친구 신청 목록 조회 실패")})
-    public CommonResponse<FriendsReqLstResponse> getReqFriendsLst(@RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
-                                                                  @RequestParam(defaultValue = "1d") @Pattern(regexp = "^(1d|7d|30d|90d|over)$",
+    public CommonResponse<FriendsReqLstResponse> getReqFriendsLst( @RequestHeader("X-user-Id") String requestUserId,
+                                                                   @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
+                                                                   @RequestParam(defaultValue = "1d") @Pattern(regexp = "^(1d|7d|30d|90d|over)$",
                                                                           message = "window 값은 1d, 7d, 30d, 90d, over 중 하나여야 합니다.") String window,
-                                                                  @RequestParam(defaultValue = "requestedAt,desc") @Pattern(
+                                                                   @RequestParam(defaultValue = "requestedAt,desc") @Pattern(
                                                                           regexp = "^requestedAt,(asc|desc)$",
                                                                           message = "sort 값은 requestedAt,asc 또는 requestedAt,desc 여야 합니다.") String sort) {
         FriendsReqLstResponse result = new FriendsReqLstResponse();
-        result = friendsService.getReqFriendsLst(maxSize, window, sort);
+        result = friendsService.getReqFriendsLst(requestUserId, maxSize, window, sort);
 
         return CommonResponse.success(result);
     }
 
     /**
-     *   친구 신청
-     * @param page
+     * 친구 신청
+     * @param targetUserId
      * @return
      */
+    @Operation(summary = "친구 신청",
+            description = "친구를 신청합니다.",
+            responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0003 : 친구 신청 실패")})
     @PostMapping("/api/friends/request")
-    public String reqFriends(@RequestParam("page") String page) {
-        return "friends";
+    public String reqFriends(@RequestHeader("X-user-Id") String requestUserId,
+                             @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String targetUserId) {
+
+        //추후 디벨롭 예정
+        friendsService.reqFriends(requestUserId, targetUserId);
+
+        return "친구신청완료";
     }
 
     /**
      *   친구 수락
-     * @param page
+     * @param targetUserId
      * @return
      */
+    @Operation(summary = "친구 수락",
+            description = "친구를 수락합니다.",
+            responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0004 : 친구 수락 실패")})
     @PostMapping("/api/friends/accept")
-    public String acptFriends(@RequestParam("page") String page) {
-        return "friends";
+    public String acptFriends(@RequestHeader("X-user-Id") String requestUserId,
+                              @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String targetUserId) {
+
+        friendsService.acptFriends(requestUserId, targetUserId);
+
+        return "친구수락";
     }
 
     /**
