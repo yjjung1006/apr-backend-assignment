@@ -29,9 +29,6 @@ public class FriendRequestEntity implements Serializable {
     @Column(name = "PROC_YN")
     private String procYn;
 
-    @Column(name = "REJECT_YN")
-    private String rejectYn;
-
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "REQUESTED_AT")
     private Date requestedAt;

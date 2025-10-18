@@ -11,5 +11,5 @@ import org.springframework.stereotype.Repository;
 public interface FriendRepository extends JpaRepository<FriendEntity, FriendId> {
     Page<FriendEntity> findByIdFromUserIdOrIdToUserId(String fromUserId, String toUserId, Pageable pageable);
 
-    boolean existsByIdFromUserIdAndIdToUserId(String fromUserId, String toUserId, String userId);
+    boolean existsByIdFromUserIdAndIdToUserId(String fromUserId, String toUserId);
 }

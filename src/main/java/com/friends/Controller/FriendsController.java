@@ -77,13 +77,13 @@ public class FriendsController {
             description = "친구를 신청합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0003 : 친구 신청 실패")})
     @PostMapping("/api/friends/request")
-    public String reqFriends(@RequestHeader("X-user-Id") String requestUserId,
+    public CommonResponse<String> reqFriends(@RequestHeader("X-user-Id") String requestUserId,
                              @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String targetUserId) {
 
         //추후 디벨롭 예정
         friendsService.reqFriends(requestUserId, targetUserId);
 
-        return "친구신청완료";
+        return CommonResponse.success("친구 신청했습니다.");
     }
 
     /**
@@ -95,21 +95,28 @@ public class FriendsController {
             description = "친구를 수락합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0004 : 친구 수락 실패")})
     @PostMapping("/api/friends/accept")
-    public String acptFriends(@RequestHeader("X-user-Id") String requestUserId,
-                              @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String targetUserId) {
+    public CommonResponse<String> acptFriends(@RequestHeader("X-user-Id") String targetUserId,
+                              @Valid @RequestBody @NotNull(message = "requestUserId는 필수입니다.") String requestUserId) {
 
         friendsService.acptFriends(requestUserId, targetUserId);
 
-        return "친구수락";
+        return CommonResponse.success("친구수락 완료했습니다.");
     }
 
     /**
      *   친구 거절
-     * @param page
+     * @param targetUserId
      * @return
      */
+    @Operation(summary = "친구 거절",
+            description = "친구를 거절합니다.",
+            responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0004 : 친구 수락 실패")})
     @PostMapping("/api/friends/reject")
-    public String rjctFriends(@RequestParam("page") String page) {
-        return "friends";
+    public CommonResponse<String> rjctFriends(@RequestHeader("X-user-Id") String targetUserId,
+                              @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String requestUserId) {
+
+        friendsService.rejectFriends(requestUserId, targetUserId);
+
+        return CommonResponse.success("거절했습니다.");
     }
 }

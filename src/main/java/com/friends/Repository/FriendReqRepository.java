@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -18,24 +19,29 @@ public interface FriendReqRepository extends JpaRepository<FriendRequestEntity, 
             String targetUserId, LocalDateTime requestedAt, Pageable pageable
     );
 
-    /*
-     * SELECT * FROM REQUEST_FRND WHERE TARGET_USER_ID =TARG AND REQUEST_USER_ID = REQUESTED AND REJECE_YN = 'N'
-     * */
-    boolean existsByRequestUserIdAndTargetUserIdAndRejectYn(String requestUserId, String targetUserId, String rejectYn);
+    boolean existsByRequestUserIdAndTargetUserId(String requestUserId, String targetUserId);
 
-    /*
-     * SELECT * FROM REQUEST_FRND WHERE TARGET_USER_ID =TARG AND REQUEST_USER_ID = REQUESTED AND proc_yn  = 'y'
-     * */
     boolean existsByRequestUserIdAndTargetUserIdAndProcYn(String requestUserId, String targetUserId, String procYn);
 
     @Modifying
+    @Transactional
     @Query("UPDATE FriendRequestEntity f " +
             "SET f.procYn = 'Y', f.respondedAt = :respondedAt " +
             "WHERE f.requestUserId = :requestUserId " +
             "AND f.targetUserId = :targetUserId " +
-            "AND f.procYn = 'N' " +
-            "AND f.rejectYn = 'N'")
+            "AND f.procYn = 'N' ")
     int approveFriendRequest(@Param("requestUserId") String requestUserId,
                              @Param("targetUserId") String targetUserId,
                              @Param("respondedAt") Date respondedAt);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM FriendRequestEntity f " +
+            "WHERE f.requestUserId = :requestUserId " +
+            "AND f.targetUserId = :targetUserId "  +
+            "AND f.procYn = :procYn "  +
+            "AND f.respondedAt IS NULL")
+    int deletePendingRequestsByTargetUserId(@Param("requestUserId") String requestUserId,
+                                            @Param("targetUserId") String targetUserId,
+                                            @Param("procYn") String procYn);
 }

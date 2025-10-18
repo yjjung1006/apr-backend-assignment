@@ -17,5 +17,5 @@ import java.util.List;
 public class FriendsLstResponse {
     private Integer totalPages;
     private Integer totalCount;
-    private List<FriendEntity> items;
+    private List<FriendsLstInfoResponse> items;
 }
