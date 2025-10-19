@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 @Entity
-@Table(name = "RQST_FRND")
+@Table(name = "FRND_REQUEST")
 @Getter
 @Setter
 @NoArgsConstructor
