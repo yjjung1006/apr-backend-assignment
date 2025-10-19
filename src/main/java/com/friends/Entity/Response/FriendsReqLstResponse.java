@@ -16,6 +16,6 @@ import java.util.List;
 @Schema(description = "받은 친구 신청 목록 조회 응답 정보")
 public class FriendsReqLstResponse {
     private String window;
-    private Integer totalCount;
+    private long totalCount;
     private List<FriendReq> items;
 }

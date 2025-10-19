@@ -1,6 +1,7 @@
 package com.friends.Repository;
 
 import com.friends.Entity.Request.FriendRequestEntity;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,13 +16,15 @@ import java.util.List;
 
 @Repository
 public interface FriendReqRepository extends JpaRepository<FriendRequestEntity, String> {
-    List<FriendRequestEntity> findByTargetUserIdAndRequestedAtAfterOrderByRequestedAtDesc(
+    Page<FriendRequestEntity> findByTargetUserIdAndRequestedAtAfterOrderByRequestedAtDesc(
             String targetUserId, LocalDateTime requestedAt, Pageable pageable
     );
 
     boolean existsByRequestUserIdAndTargetUserId(String requestUserId, String targetUserId);
 
     boolean existsByRequestUserIdAndTargetUserIdAndProcYn(String requestUserId, String targetUserId, String procYn);
+
+    boolean existsByRequestUserId(String requestUserId);
 
     @Modifying
     @Transactional

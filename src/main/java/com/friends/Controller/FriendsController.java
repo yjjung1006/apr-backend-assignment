@@ -32,14 +32,14 @@ public class FriendsController {
     @Operation(summary = "친구 목록 조회",
                 description = "나를 기준으로 현재 맺어진 친구 목록을 조회합니다.",
                 responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0001 : 친구 목록 조회 실패")})
-    public CommonResponse<FriendsLstResponse> getFriendsLst(@RequestHeader("X-user-Id") String requestUserId,
+    public CommonResponse<FriendsLstResponse> getFriendsLst(@RequestHeader("X-user-Id") String myUserId,
                                             @RequestParam @NotNull @Min(value = 0, message = "페이지는 0 이상이어야 합니다") Integer page,
                                             @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
                                             @RequestParam(defaultValue = "approvedAt,desc") @Pattern(
                                                     regexp = "^approvedAt,(asc|desc)$",
                                                     message = "sort 값은 approvedAt,asc 또는 approvedAt,desc 여야 합니다.") String sort) {
         FriendsLstResponse result = new FriendsLstResponse();
-        result = friendsService.getFriendsLst(requestUserId, page, maxSize, sort);
+        result = friendsService.getFriendsLst(myUserId, page, maxSize, sort);
 
         return CommonResponse.success(result);
     }
@@ -55,7 +55,7 @@ public class FriendsController {
     @Operation(summary = "받은 친구 신청 목록 조회",
             description = "나를 기준으로 받은 친구 신청 목록을 조회합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0002 : 받은 친구 신청 목록 조회 실패")})
-    public CommonResponse<FriendsReqLstResponse> getReqFriendsLst( @RequestHeader("X-user-Id") String requestUserId,
+    public CommonResponse<FriendsReqLstResponse> getReqFriendsLst( @RequestHeader("X-user-Id") String myUserId,
                                                                    @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
                                                                    @RequestParam(defaultValue = "1d") @Pattern(regexp = "^(1d|7d|30d|90d|over)$",
                                                                           message = "window 값은 1d, 7d, 30d, 90d, over 중 하나여야 합니다.") String window,
@@ -63,7 +63,7 @@ public class FriendsController {
                                                                           regexp = "^requestedAt,(asc|desc)$",
                                                                           message = "sort 값은 requestedAt,asc 또는 requestedAt,desc 여야 합니다.") String sort) {
         FriendsReqLstResponse result = new FriendsReqLstResponse();
-        result = friendsService.getReqFriendsLst(requestUserId, maxSize, window, sort);
+        result = friendsService.getReqFriendsLst(myUserId, maxSize, window, sort);
 
         return CommonResponse.success(result);
     }
@@ -77,46 +77,45 @@ public class FriendsController {
             description = "친구를 신청합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0003 : 친구 신청 실패")})
     @PostMapping("/api/friends/request")
-    public CommonResponse<String> reqFriends(@RequestHeader("X-user-Id") String requestUserId,
+    public CommonResponse<String> reqFriends(@RequestHeader("X-user-Id") String myUserId,
                              @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String targetUserId) {
 
-        //추후 디벨롭 예정
-        friendsService.reqFriends(requestUserId, targetUserId);
+        friendsService.reqFriends(myUserId, targetUserId);
 
         return CommonResponse.success("친구 신청했습니다.");
     }
 
     /**
      *   친구 수락
-     * @param targetUserId
+     * @param myUserId
      * @return
      */
     @Operation(summary = "친구 수락",
             description = "친구를 수락합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0004 : 친구 수락 실패")})
     @PostMapping("/api/friends/accept")
-    public CommonResponse<String> acptFriends(@RequestHeader("X-user-Id") String targetUserId,
+    public CommonResponse<String> acptFriends(@RequestHeader("X-user-Id") String myUserId,
                               @Valid @RequestBody @NotNull(message = "requestUserId는 필수입니다.") String requestUserId) {
 
-        friendsService.acptFriends(requestUserId, targetUserId);
+        friendsService.acptFriends(requestUserId, myUserId);
 
         return CommonResponse.success("친구수락 완료했습니다.");
     }
 
     /**
      *   친구 거절
-     * @param targetUserId
+     * @param myUserId
      * @return
      */
     @Operation(summary = "친구 거절",
             description = "친구를 거절합니다.",
             responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0004 : 친구 수락 실패")})
     @PostMapping("/api/friends/reject")
-    public CommonResponse<String> rjctFriends(@RequestHeader("X-user-Id") String targetUserId,
+    public CommonResponse<String> rjctFriends(@RequestHeader("X-user-Id") String myUserId,
                               @Valid @RequestBody @NotNull(message = "targetUserId는 필수입니다.") String requestUserId) {
 
-        friendsService.rejectFriends(requestUserId, targetUserId);
+        friendsService.rejectFriends(requestUserId, myUserId);
 
-        return CommonResponse.success("거절했습니다.");
+        return CommonResponse.success("친구신청을 거절했습니다.");
     }
 }

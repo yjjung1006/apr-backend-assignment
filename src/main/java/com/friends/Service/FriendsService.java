@@ -4,6 +4,7 @@ import com.friends.Entity.FriendId;
 import com.friends.Entity.Request.FriendEntity;
 import com.friends.Entity.FriendReq;
 import com.friends.Entity.Request.FriendRequestEntity;
+import com.friends.Entity.Request.UserEntity;
 import com.friends.Entity.Response.FriendsLstInfoResponse;
 import com.friends.Entity.Response.FriendsLstResponse;
 import com.friends.Entity.Response.FriendsReqLstResponse;
@@ -11,6 +12,7 @@ import com.friends.Exception.BusinessException;
 import com.friends.Repository.FriendRepository;
 import com.friends.Repository.FriendReqRepository;
 import com.friends.Repository.UsersRepository;
+import com.friends.Util.ConstantsUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,7 +34,6 @@ public class FriendsService {
     private final FriendReqRepository friendReqRepository;
     private final UsersRepository usersRepository;
 
-    private static final String myId = "jyj"; // "나" 고정 ID
     private final Map<String, List<Long>> requestTimes = new ConcurrentHashMap<>();
 
     /**
@@ -42,7 +43,7 @@ public class FriendsService {
      * @param sort
      * @return
      */
-    public FriendsLstResponse getFriendsLst(String requestUserId, Integer page, Integer maxSize, String sort) {
+    public FriendsLstResponse getFriendsLst(String myUserId, Integer page, Integer maxSize, String sort) {
         //정렬 유효성체크
         String[] sortParams = sort.split(",");
         if (sortParams.length != 2 || !sortParams[0].equals("approvedAt") ||
@@ -57,7 +58,7 @@ public class FriendsService {
         Pageable pageable = PageRequest.of(page, maxSize, sorting);
 
         // 조회
-        Page<FriendEntity> result = friendRepository.findByIdFromUserIdOrIdToUserId(requestUserId, requestUserId, pageable);
+        Page<FriendEntity> result = friendRepository.findByIdFromUserIdOrIdToUserId(myUserId, myUserId, pageable);
 
         List<FriendsLstInfoResponse> items = result.stream().map(f -> {
             FriendsLstInfoResponse item = new FriendsLstInfoResponse();
@@ -83,7 +84,7 @@ public class FriendsService {
      * @param sort
      * @return
      */
-    public FriendsReqLstResponse getReqFriendsLst(String requestUserId, Integer maxSize, String window, String sort) {
+    public FriendsReqLstResponse getReqFriendsLst(String myUserId, Integer maxSize, String window, String sort) {
         // 정렬 유효성체크
         String[] sortParams = sort.split(",");
         if (sortParams.length != 2 || !sortParams[0].equals("requestedAt") ||
@@ -109,8 +110,8 @@ public class FriendsService {
         Pageable pageable = PageRequest.of(0, maxSize);
 
         // 조회
-        List<FriendRequestEntity> result =
-                friendReqRepository.findByTargetUserIdAndRequestedAtAfterOrderByRequestedAtDesc(requestUserId, startTime, pageable);
+        Page<FriendRequestEntity> result =
+                friendReqRepository.findByTargetUserIdAndRequestedAtAfterOrderByRequestedAtDesc(myUserId, startTime, pageable);
 
         // 변환
         List<FriendReq> items = result.stream()
@@ -120,7 +121,7 @@ public class FriendsService {
         // 결과값세팅
         FriendsReqLstResponse response = new FriendsReqLstResponse();
         response.setWindow(window);
-        response.setTotalCount(maxSize);
+        response.setTotalCount(result.getTotalElements());
         response.setItems(items);
 
         return response;
@@ -128,13 +129,14 @@ public class FriendsService {
 
     /**
      * 친구 신청
-     * @param requestUserId
+     * @param myUserId
      * @param targetUserId
      */
     @Transactional
-    public void reqFriends(String requestUserId, String targetUserId) {
+    public void reqFriends(String myUserId, String targetUserId) {
+
         //1. 자기 자신에게 요청
-        if (requestUserId.equals(targetUserId)) {
+        if (targetUserId.equals(myUserId)) {
             throw new BusinessException("자기 자신에게는 요청할 수 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
@@ -144,50 +146,73 @@ public class FriendsService {
         }
 
         //3. 이미 보낸 요청(거절x)
-        boolean exists = friendReqRepository.existsByRequestUserIdAndTargetUserId(requestUserId, targetUserId);
-        if (exists) {
+        boolean existsByMe = friendReqRepository.existsByRequestUserIdAndTargetUserId(myUserId, targetUserId);
+        if (existsByMe) {
             throw new BusinessException("이미 요청한 친구입니다.", HttpStatus.BAD_REQUEST);
         }
 
-        //4. 사용자별 초당 10회 요청 제한
-        this.checkClickCnt(requestUserId);
+        //4. 상대방의 신청 이력이 있는 경우
+        boolean existsByOther = friendReqRepository.existsByRequestUserIdAndTargetUserId(targetUserId, myUserId);
+        if (existsByOther) {
+            throw new BusinessException("상대방의 친구 신청 건이 존재합니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        //5. 사용자별 초당 10회 요청 제한
+        this.checkClickCnt(myUserId);
+
+        //6. 신청자에 대해서는 user테이블에 insert
+        if (!usersRepository.existsById(myUserId)) {
+            UserEntity user = new UserEntity();
+            user.setUserId(myUserId);
+            user.setUsername(ConstantsUtil.USER_NAME +myUserId);
+            user.setEmail(myUserId+ConstantsUtil.USER_EMAIL);
+            user.setCreatedAt(new Date());
+            usersRepository.save(user);
+        }
 
         //5. insert
         FriendRequestEntity entity = new FriendRequestEntity();
         entity.setRequestId(UUID.randomUUID().toString());
-        entity.setRequestUserId(requestUserId);
+        entity.setRequestUserId(myUserId);
         entity.setTargetUserId(targetUserId);
-        entity.setProcYn("N");
+        entity.setProcYn(ConstantsUtil.BOOLEAN_N);
         entity.setRequestedAt(new Date());
         friendReqRepository.save(entity);
+
+
     }
 
     /**
      * 친구 수락
      * @param requestUserId
-     * @param targetUserId
+     * @param myUserId
      */
     @Transactional
-    public void acptFriends(String requestUserId, String targetUserId) {
+    public void acptFriends(String requestUserId, String myUserId) {
         //1. 자기 자신에게 요청
-        if (requestUserId.equals(targetUserId)) {
+        if (requestUserId.equals(myUserId)) {
             throw new BusinessException("자기 자신은 수락할 수 없습니다.",  HttpStatus.BAD_REQUEST);
         }
 
         //2. 존재하지 않는 사용자
-        if (!usersRepository.existsById(targetUserId)) {
+        if (!usersRepository.existsById(requestUserId)) {
             throw new BusinessException("존재하지 않는 사용자입니다.", HttpStatus.BAD_REQUEST);
         }
 
-        //3. 이미 목록관계 존재
-        boolean relExists = friendRepository.existsByIdFromUserIdAndIdToUserId(requestUserId, targetUserId);
+        //3. 신청이력이 없음
+        if (!friendReqRepository.existsByRequestUserId(requestUserId)) {
+            throw new BusinessException("신청이력이 없습니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        //4. 이미 목록관계 존재
+        boolean relExists = friendRepository.existsByIdFromUserIdAndIdToUserId(requestUserId, myUserId);
         if (relExists) {
             throw new BusinessException("이미 요청한 친구입니다.",  HttpStatus.BAD_REQUEST);
         }
 
         //5. update
         int updateCnt = 0;
-        updateCnt = friendReqRepository.approveFriendRequest(requestUserId, targetUserId, new Date());
+        updateCnt = friendReqRepository.approveFriendRequest(requestUserId, myUserId, new Date());
         if( updateCnt < 1) {
             //throw 예외처리
         }
@@ -195,7 +220,7 @@ public class FriendsService {
         //6. insert
         FriendId idEntity = new FriendId();
         idEntity.setFromUserId(requestUserId);
-        idEntity.setToUserId(targetUserId);
+        idEntity.setToUserId(myUserId);
 
         FriendEntity entity = new  FriendEntity();
         entity.setId(idEntity);
@@ -207,37 +232,46 @@ public class FriendsService {
     /**
      * 친구 거절
      * @param requestUserId
-     * @param targetUserId
+     * @param myUserId
      */
     @Transactional
-    public void rejectFriends(String requestUserId, String targetUserId) {
+    public void rejectFriends(String requestUserId, String myUserId) {
         //1. 자기 자신에게 요청
-        if (requestUserId.equals(targetUserId)) {
+        if (requestUserId.equals(myUserId)) {
             throw new BusinessException("자기 자신은 거절할 수 없습니다.",  HttpStatus.BAD_REQUEST);
         }
 
         //2. 존재하지 않는 사용자
-        if (!usersRepository.existsById(targetUserId)) {
+        if (!usersRepository.existsById(requestUserId)) {
             throw new BusinessException("존재하지 않는 사용자입니다.", HttpStatus.BAD_REQUEST);
         }
 
-        //3. 이미 목록관계 존재
-        boolean relExists = friendRepository.existsByIdFromUserIdAndIdToUserId(requestUserId, targetUserId);
+        //3. 신청이력이 없음
+        if (!friendReqRepository.existsByRequestUserId(requestUserId)) {
+            throw new BusinessException("신청이력이 없습니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        //4. 이미 목록관계 존재
+        boolean relExists = friendRepository.existsByIdFromUserIdAndIdToUserId(requestUserId, myUserId);
         if (relExists) {
             throw new BusinessException("이미 친구 관계입니다.",  HttpStatus.BAD_REQUEST);
         }
 
-        //4. 이미 procyn = y
-        boolean exists = friendReqRepository.existsByRequestUserIdAndTargetUserIdAndProcYn(requestUserId, targetUserId, "Y");
+        //5. 이미 procyn = y
+        boolean exists = friendReqRepository.existsByRequestUserIdAndTargetUserIdAndProcYn(requestUserId, myUserId, ConstantsUtil.BOOLEAN_Y);
         if (exists) {
             throw new BusinessException("이미 친구 관계입니다.",  HttpStatus.BAD_REQUEST);
         }
 
         //6. insert
-        friendReqRepository.deletePendingRequestsByTargetUserId(requestUserId, targetUserId, "N");
+        friendReqRepository.deletePendingRequestsByTargetUserId(requestUserId, myUserId, ConstantsUtil.BOOLEAN_N);
 
     }
 
+    /**
+     * 초당 10회 클릭 체크
+     * @param userId
+     */
     public void checkClickCnt(String userId) {
         long now = System.currentTimeMillis();
         requestTimes.putIfAbsent(userId, new ArrayList<>());
