@@ -1,0 +1,3 @@
+2025-10-20 22:37:16.286091+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "REQUEST" not found; SQL statement:
+SELECT * FROM REQUEST [42102-232]
