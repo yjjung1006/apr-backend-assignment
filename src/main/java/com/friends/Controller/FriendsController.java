@@ -3,6 +3,7 @@ package com.friends.Controller;
 import com.friends.Entity.Response.CommonResponse;
 import com.friends.Entity.Response.FriendsLstResponse;
 import com.friends.Entity.Response.FriendsReqLstResponse;
+import com.friends.Entity.Response.UsersLstResponse;
 import com.friends.Service.FriendsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,6 +23,27 @@ import org.springframework.web.bind.annotation.*;
 public class FriendsController {
 
     private final FriendsService friendsService;
+
+    /**
+     *  친구 목록 조회
+     * @param maxSize
+     * @return
+     */
+    @GetMapping("/api/users")
+    @Operation(summary = "신청 가능한 사용자 목록 조회",
+            description = "신청 가능한 사용자 목록을 조회합니다.",
+            responses = {@ApiResponse(responseCode = "200", description = "1. 정상 처리\n2. ERR-0001 : 친구 목록 조회 실패")})
+    public CommonResponse<UsersLstResponse> findUsersNotFriendWith(@RequestHeader("X-user-Id") String myUserId,
+                                                        @RequestParam @NotNull @Min(value = 0, message = "페이지는 0 이상이어야 합니다") Integer page,
+                                                        @RequestParam @NotNull @Min(value = 1, message = "maxSize는 1 이상이어야 합니다") Integer maxSize,
+                                                        @RequestParam(defaultValue = "username,desc") @Pattern(
+                                                                    regexp = "^username,(asc|desc)$",
+                                                                    message = "sort 값은 username,asc 또는 username,desc 여야 합니다.") String sort) {
+        UsersLstResponse result = new UsersLstResponse();
+        result = friendsService.findUsersNotFriendWith(myUserId, page, maxSize, sort);
+
+        return CommonResponse.success(result);
+    }
 
     /**
      *  친구 목록 조회

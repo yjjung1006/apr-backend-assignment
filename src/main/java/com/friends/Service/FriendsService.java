@@ -5,19 +5,21 @@ import com.friends.Entity.Request.FriendEntity;
 import com.friends.Entity.FriendReq;
 import com.friends.Entity.Request.FriendRequestEntity;
 import com.friends.Entity.Request.UserEntity;
-import com.friends.Entity.Response.FriendsLstInfoResponse;
-import com.friends.Entity.Response.FriendsLstResponse;
-import com.friends.Entity.Response.FriendsReqLstResponse;
+import com.friends.Entity.Response.*;
 import com.friends.Exception.BusinessException;
 import com.friends.Repository.FriendRepository;
 import com.friends.Repository.FriendReqRepository;
 import com.friends.Repository.UsersRepository;
 import com.friends.Util.ConstantsUtil;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,68 @@ public class FriendsService {
     private final UsersRepository usersRepository;
 
     private final Map<String, List<Long>> requestTimes = new ConcurrentHashMap<>();
+
+    /**
+     * 친구 목록 조회
+     * @param page
+     * @param maxSize
+     * @param sort
+     * @return
+     */
+    public UsersLstResponse findUsersNotFriendWith(String myUserId, Integer page, Integer maxSize, String sort) {
+        //정렬 유효성체크
+        String[] sortParams = sort.split(",");
+        if (sortParams.length != 2 || !sortParams[0].equals("username") ||
+                (!sortParams[1].equalsIgnoreCase("asc") && !sortParams[1].equalsIgnoreCase("desc"))) {
+            throw new BusinessException("sort는 'username,asc' 또는 'username,desc' 형태여야 합니다.",  HttpStatus.BAD_REQUEST);
+        }
+        String sortField = sortParams[0];
+        String sortDirection = sortParams[1];
+        Sort sorting = Sort.by(Sort.Direction.fromString(sortDirection), sortField);
+
+        // 페이징 세팅
+        Pageable pageable = PageRequest.of(page, maxSize, sorting);
+
+        // 조회
+        // Specification 생성
+        Specification<UserEntity> spec = (root, query, cb) -> {
+            // 현재 사용자 제외
+            Predicate notMe = cb.notEqual(root.get("userId"), myUserId);
+
+            // 서브쿼리로 친구 조회
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<FriendEntity> f = subquery.from(FriendEntity.class);
+            subquery.select(f.get("id").get("fromUserId"));
+            subquery.where(
+                    cb.or( cb.and(cb.equal(f.get("id").get("fromUserId"), myUserId),
+                                    cb.equal(f.get("id").get("toUserId"), root.get("userId"))),
+                            cb.and(cb.equal(f.get("id").get("toUserId"), myUserId),
+                                    cb.equal(f.get("id").get("fromUserId"), root.get("userId")))
+                    )
+            );
+            Predicate notFriend = cb.not(cb.exists(subquery));
+
+            return cb.and(notMe, notFriend);
+        };
+
+        Page<UserEntity> result = usersRepository.findAll(spec, pageable);
+
+        List<UsersLstInfoResponse> items =  result.stream().map(f -> {
+            UsersLstInfoResponse item = new UsersLstInfoResponse();
+            item.setUser_id(String.valueOf(f.getUserId()));
+            item.setEmail(f.getEmail());
+            item.setUser_name(f.getUsername());
+            item.setCreatedAt(f.getCreatedAt());
+            return item;
+        }).collect(Collectors.toList());
+
+        UsersLstResponse response = new UsersLstResponse();
+        response.setTotalPages(result.getTotalPages());
+        response.setTotalCount((int) result.getTotalElements());
+        response.setItems(items);
+
+        return response;
+    }
 
     /**
      * 친구 목록 조회
